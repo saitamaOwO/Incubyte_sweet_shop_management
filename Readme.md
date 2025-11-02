@@ -68,7 +68,7 @@ PORT=5000
 
 **Example MongoDB connection string:**
 ```
-DATABASE_URL="mongodb+srv://username:password@cluster.mongodb.net/sweetshop?retryWrites=true&w=majority"
+DATABASE_URL="your mongodb uri"
 ```
 
 **Frontend (.env file in frontend folder):**
