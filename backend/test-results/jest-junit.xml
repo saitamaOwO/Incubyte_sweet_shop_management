@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="10" failures="0" errors="0" time="3.081">
+  <testsuite name="Sweets Management" errors="0" failures="0" skipped="0" timestamp="2025-11-02T17:03:50" time="2.264" tests="5">
+    <testcase classname="Sweets Management should create a sweet" name="Sweets Management should create a sweet" time="0.141">
+    </testcase>
+    <testcase classname="Sweets Management should get sweet by id" name="Sweets Management should get sweet by id" time="0.039">
+    </testcase>
+    <testcase classname="Sweets Management should update sweet stock" name="Sweets Management should update sweet stock" time="0.173">
+    </testcase>
+    <testcase classname="Sweets Management should search sweet by name" name="Sweets Management should search sweet by name" time="0.041">
+    </testcase>
+    <testcase classname="Sweets Management should delete sweet" name="Sweets Management should delete sweet" time="0.198">
+    </testcase>
+  </testsuite>
+  <testsuite name="Authentication" errors="0" failures="0" skipped="0" timestamp="2025-11-02T17:03:50" time="2.466" tests="5">
+    <testcase classname="Authentication should register a new user" name="Authentication should register a new user" time="0.182">
+    </testcase>
+    <testcase classname="Authentication should not register duplicate email" name="Authentication should not register duplicate email" time="0.142">
+    </testcase>
+    <testcase classname="Authentication should verify password correctly" name="Authentication should verify password correctly" time="0.094">
+    </testcase>
+    <testcase classname="Authentication should reject invalid password" name="Authentication should reject invalid password" time="0.093">
+    </testcase>
+    <testcase classname="Authentication should create admin user" name="Authentication should create admin user" time="0.176">
+    </testcase>
+  </testsuite>
+</testsuites>
