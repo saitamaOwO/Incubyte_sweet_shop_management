@@ -4,7 +4,7 @@ A full-stack application for managing a sweet shop with customer registration, b
 
 ## Tech Stack
 
-- **Backend**: Node.js, Express.js, MongoDB
+- **Backend**: Node.js, Express.js, MongoDB with Prisma ORM
 - **Frontend**: React, Vite, React Router
 - **Testing**: Jest, Supertest
 - **Authentication**: JWT (JSON Web Tokens)
@@ -15,20 +15,22 @@ A full-stack application for managing a sweet shop with customer registration, b
 ### Customer Features
 - User registration and login
 - Browse sweets with pagination
-- Search and filter sweets by category
-- Purchase sweets
+- Search and filter sweets by category and price
+- Add items to cart
+- Place orders
+- View order history
 - Real-time data validation
 
 ### Admin Features
+- Separate admin login
 - Add, update, and delete sweets
 - Manage inventory
-- Restock items
-- View customer purchases
+- View all products
 
 ## Prerequisites
 
 - Node.js 16+ installed
-- MongoDB instance (cloud)
+- MongoDB instance (cloud or local)
 - npm or yarn package manager
 
 ## Installation & Setup
@@ -57,18 +59,36 @@ npm install
 
 **Backend (.env file in backend folder):**
 ```
-MONGODB_URI=your-mongodb-api
-ACCESS_TOKEN_SECRET=your-access-token-secret
-REFRESH_TOKEN_SECRET=your-refresh-token-secret
+DATABASE_URL=your-mongodb-connection-string
+JWT_SECRET=your-jwt-secret
+JWT_EXPIRE=7d
+ADMIN_PASSWORD=your-admin-password
 PORT=5000
-NODE_ENV=development
-FRONTEND_URL=http://localhost:3000
+```
+
+**Example MongoDB connection string:**
+```
+DATABASE_URL="mongodb+srv://username:password@cluster.mongodb.net/sweetshop?retryWrites=true&w=majority"
 ```
 
 **Frontend (.env file in frontend folder):**
 ```
 VITE_API_URL=http://localhost:5000/api
 ```
+
+#### Step 5: Initialize Prisma and Database
+
+```cmd
+cd backend
+npx prisma generate
+npx prisma db push
+npm run seed
+```
+
+This will:
+- Generate Prisma Client
+- Push the schema to your MongoDB database
+- Seed the database with an admin user and sample sweets
 
 ## Running the Application
 
@@ -111,37 +131,152 @@ npm run preview
 
 ### Authentication Endpoints
 
-#### Register
+#### Register (Customer)
 - **POST** `/api/auth/register`
-- Body: `{ name, email, phoneNumber, password }`
-- Response: User object + JWT tokens
+- Body: `{ name, email, password }`
+- Response: User object + JWT token
 
-#### Login
+#### Login (Customer)
 - **POST** `/api/auth/login`
-- Body: `{ email, password }` or `{ phoneNumber, password }`
-- Response: User object + JWT tokens
+- Body: `{ email, password }`
+- Response: User object + JWT token
+
+#### Login (Admin)
+- **POST** `/api/auth/admin-login`
+- Body: `{ email, password }`
+- Response: Admin user object + JWT token
+- Default credentials: `admin@sweetshop.com` / `admin123` (or your ADMIN_PASSWORD)
 
 ### Sweets Endpoints
 
 #### Get All Sweets
-- **GET** `/api/sweets?page=1&pageSize=12&category=Chocolate`
-- Response: Paginated sweets data
+- **GET** `/api/sweets?page=1&limit=10`
+- Response: Paginated sweets data with pagination info
+
+#### Get Sweet by ID
+- **GET** `/api/sweets/:id`
+- Response: Single sweet object
 
 #### Search Sweets
-- **GET** `/api/sweets/search?query=chocolate&minPrice=0&maxPrice=100`
-- Response: Matching sweets
+- **GET** `/api/sweets/search?query=chocolate&category=Chocolate&minPrice=0&maxPrice=100`
+- Response: Matching sweets array
 
-#### Purchase Sweet
-- **POST** `/api/sweets/:id/purchase`
-- Auth: Required
+#### Admin Routes (Require Admin Authentication)
+- **POST** `/api/sweets` - Create sweet
+  - Body: `{ name, description, price, stock, category, imageUrl }`
+- **PUT** `/api/sweets/:id` - Update sweet
+  - Body: Any sweet fields to update
+- **DELETE** `/api/sweets/:id` - Delete sweet
+
+### Cart Endpoints (Require Authentication)
+
+#### Get Cart
+- **GET** `/api/cart`
+- Response: Cart with items and sweet details
+
+#### Add to Cart
+- **POST** `/api/cart/add`
+- Body: `{ sweetId, quantity }`
+- Response: Added cart item
+
+#### Update Cart Item
+- **PUT** `/api/cart/update/:itemId`
 - Body: `{ quantity }`
-- Response: Purchase confirmation
+- Response: Updated cart item
 
-#### Admin Routes
-- **POST** `/api/sweets` - Create sweet (Admin only)
-- **PUT** `/api/sweets/:id` - Update sweet (Admin only)
-- **DELETE** `/api/sweets/:id` - Delete sweet (Admin only)
-- **POST** `/api/sweets/:id/restock` - Restock sweet (Admin only)
+#### Remove from Cart
+- **DELETE** `/api/cart/remove/:itemId`
+- Response: Success message
+
+#### Clear Cart
+- **DELETE** `/api/cart/clear`
+- Response: Success message
+
+### Order Endpoints (Require Authentication)
+
+#### Create Order
+- **POST** `/api/orders`
+- Creates order from current cart items
+- Response: Order object with items
+
+#### Get Orders
+- **GET** `/api/orders?page=1&limit=10`
+- Response: Paginated user orders
+
+#### Get Order by ID
+- **GET** `/api/orders/:id`
+- Response: Single order object
+
+## Database Schema (Prisma)
+
+### Models
+
+**User**
+- id (ObjectId)
+- email (unique)
+- password (hashed)
+- name
+- role (CUSTOMER/ADMIN)
+- cart (one-to-one)
+- orders (one-to-many)
+
+**Sweet**
+- id (ObjectId)
+- name (unique)
+- description
+- price (Float)
+- stock (Int)
+- category
+- imageUrl
+
+**Cart**
+- id (ObjectId)
+- userId (unique)
+- items (one-to-many CartItem)
+
+**CartItem**
+- id (ObjectId)
+- cartId
+- sweetId
+- quantity
+- Unique constraint on (cartId, sweetId)
+
+**Order**
+- id (ObjectId)
+- userId
+- items (one-to-many OrderItem)
+- total (Float)
+- status (PENDING by default)
+
+**OrderItem**
+- id (ObjectId)
+- orderId
+- sweetId
+- quantity
+- price (captured at order time)
+
+## Prisma Commands
+
+### Generate Prisma Client
+```cmd
+npx prisma generate
+```
+
+### Push Schema to Database
+```cmd
+npx prisma db push
+```
+
+### Open Prisma Studio (Database GUI)
+```cmd
+npx prisma studio
+```
+
+### Reset Database
+```cmd
+npx prisma db push --force-reset
+npm run seed
+```
 
 ## Testing
 
@@ -164,13 +299,13 @@ npm test -- --coverage
 
 ### AI Tools Used
 - v0 (Vercel AI): Used for generating project structure, component boilerplate and generating a general layout
-- ChatGPT: Used for debugging JWT implementation, MongoDB schema design, and middleware patterns
+- ChatGPT: Used for debugging JWT implementation, Prisma schema design, and middleware patterns
 
 ### How AI Was Used
 1. **Project Scaffolding**: Used v0 to generate the complete project structure and initial file organization
 2. **Component Generation**: Generated React components with proper hooks and state management
 3. **API Development**: Created Express route handlers and controller logic with error handling
-4. **Database Schema**: Designed MongoDB models with proper validation
+4. **Database Schema**: Designed Prisma schema with proper relations and constraints
 5. **Testing**: Generated Jest test cases with various scenarios
 6. **Styling**: Created responsive CSS with animations and modern design patterns
 7. **Documentation**: Comprehensive setup guides and API documentation
@@ -188,8 +323,13 @@ npm test -- --coverage
 #### Backend Deployment
 1. Create account on Vercel
 2. Connect GitHub repository
-3. Set environment variables in Vercel dashboard
-4. Deploy
+3. Set environment variables in Vercel dashboard:
+   - `DATABASE_URL`
+   - `JWT_SECRET`
+   - `JWT_EXPIRE`
+   - `ADMIN_PASSWORD`
+4. Run build command: `npx prisma generate && npm run build`
+5. Deploy
 
 #### Frontend Deployment
 1. Build project: `npm run build`
@@ -197,33 +337,34 @@ npm test -- --coverage
 3. Update `VITE_API_URL` to production backend URL
 
 ### Environment Variables for Production
-- `MONGODB_URI`: Production MongoDB connection string
-- `NODE_ENV=production`
-- `FRONTEND_URL`: Production frontend URL
-- JWT secrets (use strong, random values)
+- `DATABASE_URL`: Production MongoDB connection string (MongoDB Atlas recommended)
+- `JWT_SECRET`: Strong random secret for JWT signing
+- `JWT_EXPIRE`: Token expiration time (e.g., "7d")
+- `ADMIN_PASSWORD`: Secure admin password
+- `PORT`: Server port (default 5000)
 
 ## Project Structure
 
 ```
 sweet-shop-management/
 ├── backend/
-│   ├── config/          # Database & constants config
-│   ├── models/          # MongoDB schemas
-│   ├── routes/          # API routes
-│   ├── controllers/     # Business logic
-│   ├── middleware/      # Auth, validation, error handling
-│   ├── utils/           # Helper functions
-│   └── server.js        # Express app entry
+│   ├── prisma/
+│   │   └── schema.prisma    # Prisma database schema
+│   ├── routes/              # API routes
+│   ├── controllers/         # Business logic
+│   ├── middleware/          # Auth, validation, error handling
+│   ├── seed.ts              # Database seeding script
+│   └── index.ts             # Express app entry
 ├── frontend/
 │   ├── src/
-│   │   ├── components/  # React components
-│   │   ├── pages/       # Page components
-│   │   ├── hooks/       # Custom hooks
-│   │   ├── services/    # API services
-│   │   └── styles/      # CSS styles
+│   │   ├── components/      # React components
+│   │   ├── pages/           # Page components
+│   │   ├── hooks/           # Custom hooks
+│   │   ├── services/        # API services
+│   │   └── styles/          # CSS styles
 │   └── package.json
 ├── tests/
-│   ├── backend/         # Jest tests
+│   ├── backend/             # Jest tests
 │   └── jest.config.js
 └── README.md
 ```
@@ -232,69 +373,81 @@ sweet-shop-management/
 
 ### Example Commits
 ```bash
-git commit -m "feat: Initialize project structure with backend and frontend
+git commit -m "feat: Initialize project structure with Prisma ORM
 
-Used v0 to scaffold project structure and generate initial configuration files.
+Used v0 to scaffold project structure and integrate Prisma for type-safe database access.
 
 Co-authored-by: v0 <v0@users.noreply.github.com>"
 ```
 
 ```bash
-git commit -m "feat: Implement JWT authentication system
+git commit -m "feat: Implement JWT authentication with Prisma
 
 - Added token generation and verification
-- Implemented refresh token rotation
-- Created auth middleware for protected routes
+- Implemented auth middleware for protected routes
+- Created separate admin login endpoint
 
 Co-authored-by: ChatGPT <chatgpt@users.noreply.github.com>"
 ```
 
 ```bash
-git commit -m "test: Add comprehensive test suite for API endpoints
+git commit -m "feat: Add cart and order management system
 
-- 5 test cases for authentication
-- 4 test cases for sweets operations
-- Included edge cases and error scenarios
+- Cart with item management (add, update, remove)
+- Order creation from cart items
+- Stock reduction on order placement
 
 Co-authored-by: v0 <v0@users.noreply.github.com>"
 ```
 
 ## Security Features
 
-- JWT-based authentication with refresh tokens
-- Password hashing with bcryptjs
-- Rate limiting on sensitive endpoints
-- Input validation and sanitization
-- CORS configuration
-- HTTP-only cookies for token storage
-- Admin-only protected routes
+- JWT-based authentication
+- Password hashing with bcrypt
+- Role-based access control (CUSTOMER/ADMIN)
+- Input validation
+- Protected admin routes
+- Cascade deletion for related records
+- Unique constraints to prevent duplicates
 
 ## Performance Optimizations
 
-- Database indexing on search fields
+- Prisma query optimization with includes
 - Pagination for large datasets
-- Connection pooling for MongoDB
-- Request rate limiting
-- Error recovery with automatic reconnection
-- Caching strategies
+- Efficient relation queries
+- Connection pooling
+- Index on unique fields (email, name)
+- Compound unique constraints
 
 ## Troubleshooting
 
 ### MongoDB Connection Error
-- Ensure MongoDB is running locally: `mongod`
-- Or update `MONGODB_URI` to valid MongoDB Atlas connection
+- Verify `DATABASE_URL` format is correct
+- Ensure MongoDB cluster allows connections from your IP
+- Check network connectivity to MongoDB Atlas
 
-### CORS Issues
-- Update `FRONTEND_URL` in backend .env
-- Ensure credentials: 'include' in fetch requests
+### Prisma Client Not Generated
+```cmd
+npx prisma generate
+```
 
-### JWT Token Expired
-- Refresh token automatically refreshes access token
-- Check if refresh token is stored in cookies
+### Database Schema Out of Sync
+```cmd
+npx prisma db push
+```
 
 ### Port Already in Use
 - Backend: Change PORT in .env (default 5000)
 - Frontend: Use `npm run dev -- --port 3001`
+
+### JWT Token Issues
+- Verify `JWT_SECRET` is set in .env
+- Check token format in Authorization header: `Bearer <token>`
+
+### Seed Script Fails
+- Ensure database connection is working
+- Check if admin user already exists
+- Verify `ADMIN_PASSWORD` is set
 
 ## Contributing
 
